@@ -1,6 +1,8 @@
-# Temporal post-assessment starter
+# Juniper Salon — Cancellation Waitlist
 
-This repository provides a working local Temporal environment, API, Worker, and browser interface. The included neutral demo is intentionally unrelated to the customer’s final process. Use what you learn in the customer conversation to replace it.
+This prototype helps Juniper Salon coordinate last-minute appointment cancellations. It uses a durable Temporal Workflow to contact eligible waitlist clients in order, receive simulated responses, reserve the first acceptance pending staff confirmation, and record the outcome.
+
+SMS and Square are deliberately simulated. Square remains the source of truth: the appointment is not marked filled until staff selects **Confirm in Square (simulated)**.
 
 ## Important: create a new public repository—do not fork
 
@@ -40,7 +42,7 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:3000>, run the demo, and confirm that it completes. You can inspect it in the Temporal Web UI at <http://localhost:8233>. Setup time does not count toward the assessment.
+Open <http://localhost:3000>, choose **Start filling this opening**, then use the clearly labeled simulated accept/decline controls. An accepted client is held pending staff confirmation. You can inspect the durable Workflow, its Signals, and its history in the Temporal Web UI at <http://localhost:8233>.
 
 Other commands:
 
@@ -52,12 +54,19 @@ npm run stop      # Stop the local Temporal service
 
 ## Repository map
 
-- `src/workflows.ts` — durable Workflow logic and message handlers
+- `src/workflows.ts` — durable cancellation-filling Workflow, response timer, and message handlers
 - `src/worker.ts` — Worker and Task Queue configuration
 - `src/api.ts` — browser-facing API and Temporal Client
 - `src/types.ts` — shared data types
-- `public/` — customer-facing interface
+- `public/` — salon-friendly prototype dashboard
 - `tests/` — Workflow test example
+
+## Prototype assumptions
+
+- Two eligible clients receive each simulated offer batch.
+- Each batch has a durable 10-minute Temporal response timer.
+- The first acceptance reserves the opening; it never books the appointment automatically.
+- The static sample waitlist demonstrates service, availability, required-stylist, and waitlist-order rules.
 
 You may change any application file. Do not edit generated files in `node_modules`.
 

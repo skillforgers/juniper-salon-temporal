@@ -2,8 +2,15 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { Client, Connection } from "@temporalio/client";
 import express, { type NextFunction, type Request, type Response } from "express";
-import type { DemoStatus } from "./types";
-import { demoWorkflow } from "./workflows";
+import type { ClientResponseInput, OpeningStatus } from "./types";
+import {
+  acceptedClientBackedOut,
+  confirmInSquare,
+  fillCancellationWorkflow,
+  getOpeningStatus,
+  respondToOffer,
+  stopFilling,
+} from "./workflows";
 
 const app = express();
 app.use(express.json());
@@ -17,10 +24,10 @@ function getClient(): Promise<Client> {
   return clientPromise;
 }
 
-app.post("/api/demo", async (_request, response) => {
-  const requestId = randomUUID();
+app.post("/api/openings", async (_request, response) => {
+  const requestId = `juniper-${randomUUID()}`;
   const client = await getClient();
-  await client.workflow.start(demoWorkflow, {
+  await client.workflow.start(fillCancellationWorkflow, {
     workflowId: requestId,
     taskQueue: "assessment-starter",
     args: [requestId],
@@ -28,19 +35,40 @@ app.post("/api/demo", async (_request, response) => {
   response.status(201).json({ requestId });
 });
 
-app.get("/api/demo/:requestId", async (request, response) => {
+app.get("/api/openings/:requestId", async (request, response) => {
   const client = await getClient();
   const status = await client.workflow
     .getHandle(request.params.requestId)
-    .query<DemoStatus>("getDemoStatus");
+    .query<OpeningStatus>(getOpeningStatus);
   response.json(status);
 });
 
-app.post("/api/demo/:requestId/continue", async (request, response) => {
+app.post("/api/openings/:requestId/respond", async (request, response) => {
+  const input = request.body as ClientResponseInput;
+  if (!input?.clientId || !["accept", "decline"].includes(input.response)) {
+    response.status(400).json({ error: "Provide a clientId and an accept or decline response." });
+    return;
+  }
   const client = await getClient();
-  await client.workflow
-    .getHandle(request.params.requestId)
-    .signal("continueDemo");
+  await client.workflow.getHandle(request.params.requestId).signal(respondToOffer, input);
+  response.status(202).json({ accepted: true });
+});
+
+app.post("/api/openings/:requestId/confirm", async (request, response) => {
+  const client = await getClient();
+  await client.workflow.getHandle(request.params.requestId).signal(confirmInSquare);
+  response.status(202).json({ accepted: true });
+});
+
+app.post("/api/openings/:requestId/back-out", async (request, response) => {
+  const client = await getClient();
+  await client.workflow.getHandle(request.params.requestId).signal(acceptedClientBackedOut);
+  response.status(202).json({ accepted: true });
+});
+
+app.post("/api/openings/:requestId/stop", async (request, response) => {
+  const client = await getClient();
+  await client.workflow.getHandle(request.params.requestId).signal(stopFilling);
   response.status(202).json({ accepted: true });
 });
 
@@ -54,5 +82,4 @@ app.use(
 );
 
 const port = Number(process.env.PORT ?? 3000);
-app.listen(port, () => console.log(`Starter is available at http://localhost:${port}`));
-
+app.listen(port, () => console.log(`Juniper Salon prototype is available at http://localhost:${port}`));

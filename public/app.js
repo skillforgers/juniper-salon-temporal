@@ -1,40 +1,19 @@
-const phase = document.querySelector("#phase");
-const message = document.querySelector("#message");
-const start = document.querySelector("#start");
-const continueButton = document.querySelector("#continue");
-const requestIdText = document.querySelector("#request-id");
-let requestId;
-let pollTimer;
-
-async function refresh() {
-  if (!requestId) return;
-  const response = await fetch(`/api/demo/${requestId}`);
-  const status = await response.json();
-  if (!response.ok) {
-    phase.textContent = "Waiting for Worker";
-    message.textContent = "Temporal has the request and will continue when a Worker is available.";
-    return;
-  }
-  phase.textContent = status.phase;
-  message.textContent = status.message;
-  continueButton.hidden = status.phase !== "waiting";
-  if (status.phase === "complete") clearInterval(pollTimer);
+const $ = (selector) => document.querySelector(selector);
+const phase = $("#phase"), phaseMessage = $("#phase-message"), staffActions = $("#staff-actions"), clients = $("#clients"), activity = $("#activity"), deadline = $("#deadline"), appointmentStatus = $("#appointment-status");
+let requestId, pollTimer;
+const titleForPhase = { offering: "Waiting for client responses", "awaiting-confirmation": "Awaiting staff confirmation", filled: "Appointment filled", unfilled: "No eligible clients remain", stopped: "Process stopped" };
+const messageForPhase = { offering: "Simulated offers are active. The first acceptance safely reserves the opening.", "awaiting-confirmation": "An accepted client is reserved. Confirm it in Square before calling this appointment filled.", filled: "Square is the source of truth. Other clients with offers have been notified.", unfilled: "There are no remaining eligible waitlist clients to contact.", stopped: "Staff marked this opening as filled another way." };
+const displayStatus = { "not-contacted": "Next in line", waiting: "Offer sent · waiting", declined: "Declined", accepted: "Accepted · reserved", withdrawn: "Backed out", "not-selected": "Not selected · filled", expired: "No response · expired" };
+function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&gt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]); }
+function render(status) {
+  $("#appointment-service").textContent = status.appointment.service; $("#appointment-time").textContent = status.appointment.dateTime; $("#appointment-stylist").textContent = `With ${status.appointment.stylist}`;
+  appointmentStatus.textContent = status.appointment.status; appointmentStatus.className = `badge ${status.phase}`; phase.textContent = titleForPhase[status.phase]; phaseMessage.textContent = messageForPhase[status.phase]; deadline.textContent = status.offerDeadline ? `Response window closes at ${new Date(status.offerDeadline).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} (Temporal timer)` : "";
+  clients.innerHTML = status.clients.map((client) => { const preference = client.stylistPreference ? `${client.stylistPreference.name}${client.stylistPreference.required ? " · required" : " · preferred"}` : "No preference"; const eligibility = client.eligible ? '<span class="good">Eligible</span>' : `<span class="muted">Not eligible</span><small>${escapeHtml(client.ineligibleReason)}</small>`; const controls = client.offerStatus === "waiting" && status.phase === "offering" ? `<div class="simulation"><button data-client="${client.id}" data-response="accept" class="tiny">Simulate accept</button><button data-client="${client.id}" data-response="decline" class="tiny secondary">Decline</button></div>` : ""; return `<tr><td>${client.position}</td><td><strong>${escapeHtml(client.name)}</strong></td><td>${escapeHtml(client.requestedService)}<small>${escapeHtml(client.availability)}</small></td><td>${escapeHtml(preference)}</td><td>${eligibility}</td><td><span class="offer ${client.offerStatus}">${displayStatus[client.offerStatus]}</span>${controls}</td></tr>`; }).join("");
+  activity.innerHTML = status.activity.map((item) => `<li>${escapeHtml(item.message)}</li>`).join(""); renderStaffActions(status);
 }
-
-start.addEventListener("click", async () => {
-  start.disabled = true;
-  const response = await fetch("/api/demo", { method: "POST" });
-  const body = await response.json();
-  requestId = body.requestId;
-  requestIdText.textContent = `Workflow ID: ${requestId}`;
-  start.hidden = true;
-  pollTimer = setInterval(() => refresh().catch(console.error), 500);
-  await refresh();
-});
-
-continueButton.addEventListener("click", async () => {
-  continueButton.disabled = true;
-  await fetch(`/api/demo/${requestId}/continue`, { method: "POST" });
-  await refresh();
-});
-
+function renderStaffActions(status) { if (status.phase === "awaiting-confirmation") staffActions.innerHTML = '<button data-staff="confirm">Confirm in Square <span>(simulated)</span></button><button data-staff="back-out" class="secondary">Client backed out — continue</button><button data-staff="stop" class="quiet">Stop process</button>'; else if (status.phase === "offering") staffActions.innerHTML = '<button data-staff="stop" class="secondary">Stop — filled another way</button>'; else { staffActions.innerHTML = '<p class="complete">This workflow is complete.</p>'; clearInterval(pollTimer); } }
+async function refresh() { if (!requestId) return; const response = await fetch(`/api/openings/${requestId}`); if (!response.ok) throw new Error("Could not load workflow status"); render(await response.json()); }
+async function post(path, body) { await fetch(`/api/openings/${requestId}${path}`, { method: "POST", headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined }); await refresh(); }
+$("#start").addEventListener("click", async () => { const start = $("#start"); start.disabled = true; const response = await fetch("/api/openings", { method: "POST" }); requestId = (await response.json()).requestId; pollTimer = setInterval(() => refresh().catch(console.error), 800); await refresh(); });
+clients.addEventListener("click", (event) => { const button = event.target.closest("button[data-client]"); if (button) post("/respond", { clientId: button.dataset.client, response: button.dataset.response }).catch(console.error); });
+staffActions.addEventListener("click", (event) => { const button = event.target.closest("button[data-staff]"); if (button) post(`/${button.dataset.staff}`).catch(console.error); });

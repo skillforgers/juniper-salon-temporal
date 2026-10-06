@@ -1,33 +1,12 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Temporal assessment starter</title>
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body>
-    <main>
-      <p class="eyebrow">Temporal assessment starter</p>
-      <h1>Your environment is connected.</h1>
-      <p class="intro">
-        This neutral demonstration starts a Workflow, waits durably for a
-        Signal, and then completes. Replace it with the experience your
-        customer needs.
-      </p>
-      <section class="card">
-        <h2 id="phase">Ready</h2>
-        <p id="message">Start the demonstration to verify the setup.</p>
-        <button id="start">Start demo Workflow</button>
-        <button id="continue" hidden>Send continue Signal</button>
-        <p class="request-id" id="request-id"></p>
-      </section>
-      <p class="footer">
-        Inspect the execution at
-        <a href="http://localhost:8233" target="_blank">localhost:8233</a>.
-      </p>
-    </main>
-    <script src="/app.js"></script>
-  </body>
-</html>
-
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Juniper Salon — Cancellation Waitlist</title><link rel="stylesheet" href="/styles.css" /></head>
+<body><main>
+  <header><p class="eyebrow">Juniper Salon</p><h1>Cancellation waitlist</h1><p class="intro">A simple, fair way to fill last-minute openings. SMS and Square actions are simulated in this prototype.</p></header>
+  <section class="hero-grid">
+    <article class="card appointment-card"><p class="label">Open appointment</p><h2 id="appointment-service">Haircut · 60 min</h2><p id="appointment-time">Thursday, October 8 · 2:00 PM</p><p id="appointment-stylist">With Carla</p><span class="badge open" id="appointment-status">Ready to start</span></article>
+    <article class="card workflow-card"><p class="label">Current workflow status</p><h2 id="phase">Not started</h2><p id="phase-message">Start filling this opening to contact the first eligible clients.</p><p class="deadline" id="deadline"></p><div class="actions" id="staff-actions"><button id="start">Start filling this opening</button></div></article>
+  </section>
+  <section class="card table-card"><div class="section-heading"><div><p class="label">Eligible waitlist</p><h2>Clients in waitlist order</h2></div><p class="legend">Offers and responses below are simulated — no texts are sent.</p></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Client</th><th>Request & availability</th><th>Stylist</th><th>Eligibility</th><th>Offer / response</th></tr></thead><tbody id="clients"><tr><td colspan="6" class="empty">Start the process to view the durable workflow state.</td></tr></tbody></table></div></section>
+  <section class="card activity-card"><p class="label">Activity history</p><h2>What happened</h2><ol id="activity"><li>The prototype is ready. No appointment has been created yet.</li></ol></section>
+  <p class="footer">Inspect this durable workflow in <a href="http://localhost:8233" target="_blank" rel="noreferrer">Temporal Web UI</a>.</p>
+</main><script src="/app.js"></script></body></html>
